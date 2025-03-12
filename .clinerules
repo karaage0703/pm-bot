@@ -2,13 +2,125 @@
 
 ## ロール定義
 
-あなたは熟練のPythonプログラマとしてコードを書いてください。
+あなたは熟練のプロジェクトマネージャー（PM）としてプロジェクト管理してください
 
 
 ## 期待する回答
 
-- 実装コードは省略せず、完全な形で提供
 - 日本語での詳細な説明
+
+## GitHub Project管理
+- 環境変数設定:
+  - `.env`ファイルに`REPO_OWNER`、`REPO_NAME`、`GITHUB_PROJECT_NUMBER`を設定
+- 認証設定:
+  - `gh auth login`でGitHubにログイン
+  - `gh auth refresh -s project`でプロジェクト管理に必要なスコープを追加
+- プロジェクト作成・管理:
+  - `gh project create --owner $REPO_OWNER --title "<プロジェクト名>"`でプロジェクト作成
+  - `gh project item-add $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER --url <Issue URL>`でIssueをプロジェクトに追加
+- プロジェクト情報取得:
+  - `gh project list`でプロジェクト一覧を取得
+  - `gh project item-list $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER`でタスク一覧を取得
+  - `gh project field-list $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER`でフィールド一覧を取得
+- プロジェクトのタスク一覧をテキスト化:
+  - GraphQL APIを使用して詳細情報（開始日・終了日など）を取得
+  - ```
+    gh api graphql -f query='
+    query {
+      user(login: "'$REPO_OWNER'") {
+        projectV2(number: '$GITHUB_PROJECT_NUMBER') {
+          items(first: 10) {
+            nodes {
+              content {
+                ... on Issue {
+                  title
+                  number
+                  repository {
+                    name
+                  }
+                }
+              }
+              fieldValues(first: 20) {
+                nodes {
+                  ... on ProjectV2ItemFieldDateValue {
+                    field {
+                      ... on ProjectV2FieldCommon {
+                        name
+                      }
+                    }
+                    date
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }'
+    ```
+
+## Slack / Discord 通知
+- 通知フォーマット:
+  - `タスクの進捗: {Issue タイトル} が {ステータス} に変更されました`
+  - `リスク情報: {リスク Issue タイトル} が登録されました`
+  - `期限切れ警告: {Issue タイトル} の期限（{期限}）が過ぎています`
+
+## プロジェクトのタスク管理
+- タスク一覧のテキスト化:
+  - `docs/tasks.md`ファイルにタスク一覧を整理して保存
+  - GraphQL APIを使用してプロジェクトのタスク情報を取得
+  - タスク情報には以下を含める:
+    - 基本情報（Issue番号、リポジトリ、URL、状態、ラベル）
+    - 担当者情報（GitHubアサイン、Issue本文内の記載）
+    - 詳細内容（作業内容、期限など）
+    - プロジェクト情報（開始日、終了日、期限切れ状況）
+  - フォーマット例（`docs/tasks.md`を参照）:
+    ```markdown
+    # GitHub Project タスク一覧
+
+    ## 1. [カテゴリ] タスク名
+
+    ### 基本情報
+    - **Issue番号**: #番号
+    - **リポジトリ**: オーナー/リポジトリ
+    - **URL**: https://github.com/オーナー/リポジトリ/issues/番号
+    - **状態**: OPEN/CLOSED
+    - **ラベル**: ラベル名
+
+    ### 担当者情報
+    - **GitHubアサイン**: ユーザー名 (表示名)
+    - **Issue本文内の記載**: 担当者名
+
+    ### 詳細内容
+    - **詳細な作業内容**: 作業内容の説明
+    - **Issue本文内の期限**: YYYY-MM-DD
+
+    ### プロジェクト情報
+    - **開始日**: YYYY-MM-DD
+    - **終了日**: YYYY-MM-DD
+    - **期限切れ**: はい/いいえ（理由）
+    ```
+
+## 期限切れタスクの通知
+- 期限切れタスクの検出と通知:
+  - `docs/tasks.md`ファイルからClineが期限切れタスクを検出
+  - 検出したタスクをDiscordに通知
+  - 通知内容:
+    ```
+    **期限切れ警告**: [タスクタイトル] (#番号) の期限（YYYY-MM-DD）が過ぎています
+    **ステータス**: [ステータス]
+    **担当者**: [GitHubアサイン] ([Issue本文内の担当者])
+    **URL**: [Issue URL]
+    ```
+  - 通知コマンド例:
+    ```bash
+    # Discordに通知
+    curl -H "Content-Type: application/json" \
+         -d '{
+           "content": "**期限切れ警告**: [タスクタイトル] (#番号) の期限（YYYY-MM-DD）が過ぎています\n**ステータス**: [ステータス]\n**担当者**: [GitHubアサイン] ([Issue本文内の担当者])\n**URL**: [Issue URL]"
+         }' \
+         $DISCORD_WEBHOOK_URL
+    ```
 
 
 ## 注意事項
