@@ -58,11 +58,11 @@ def get_files(directory, recursive=True):
 
     if recursive:
         for file_path in directory_path.glob("**/*"):
-            if file_path.is_file():
+            if file_path.is_file() and not file_path.name == ".gitkeep":
                 files.append(str(file_path))
     else:
         for file_path in directory_path.glob("*"):
-            if file_path.is_file():
+            if file_path.is_file() and not file_path.name == ".gitkeep":
                 files.append(str(file_path))
 
     return sorted(files)
