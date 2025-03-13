@@ -155,10 +155,136 @@ Cline の AI コーディング支援機能を活用し、タスク管理、資�
 - GitHub のアクセス権限を適切に管理  
 - Slack / Discord Webhook の URL を環境変数で管理  
 
-### **2.5 テスト設計**
+### **2.5 実装詳細**
+
+#### **2.5.1 タスク一覧のテキスト化**
+- **概要**
+  - GitHubプロジェクトのタスク情報を取得し、`docs/tasks.md`ファイルにマークダウン形式で書き込む
+  - GraphQL APIを使用して詳細情報（開始日・終了日など）を取得
+- **実装ファイル**
+  - `src/update_tasks.py`: タスク一覧のテキスト化を行うPythonスクリプト
+- **GraphQL APIクエリ例**
+  ```graphql
+  query {
+    user(login: "REPO_OWNER") {
+      projectV2(number: PROJECT_NUMBER) {
+        items(first: 100) {
+          nodes {
+            content {
+              ... on Issue {
+                title
+                number
+                state
+                body
+                url
+                labels(first: 10) {
+                  nodes {
+                    name
+                  }
+                }
+                assignees(first: 5) {
+                  nodes {
+                    login
+                    name
+                  }
+                }
+                repository {
+                  name
+                  owner {
+                    login
+                  }
+                }
+              }
+            }
+            fieldValues(first: 20) {
+              nodes {
+                ... on ProjectV2ItemFieldDateValue {
+                  field {
+                    ... on ProjectV2FieldCommon {
+                      name
+                    }
+                  }
+                  date
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  ```
+- **出力フォーマット**
+  ```markdown
+  # GitHub Project タスク一覧
+
+  ## 1. [カテゴリ] タスク名
+
+  ### 基本情報
+  - **Issue番号**: #番号
+  - **リポジトリ**: オーナー/リポジトリ
+  - **URL**: https://github.com/オーナー/リポジトリ/issues/番号
+  - **状態**: OPEN/CLOSED
+  - **ラベル**: ラベル名
+
+  ### 担当者情報
+  - **GitHubアサイン**: ユーザー名 (表示名)
+  - **Issue本文内の記載**: 担当者名
+
+  ### 詳細内容
+  - **詳細な作業内容**: 作業内容の説明
+  - **Issue本文内の期限**: YYYY-MM-DD
+
+  ### プロジェクト情報
+  - **開始日**: YYYY-MM-DD
+  - **終了日**: YYYY-MM-DD
+  - **期限切れ**: はい/いいえ（理由）
+  ```
+
+#### **2.5.2 期限切れタスクの通知**
+- **概要**
+  - `docs/tasks.md`ファイルから期限切れタスクを検出し、SlackやDiscordに通知
+  - 期限切れの判定は、終了日または本文内の期限が過去の日付かどうかで行う
+  - 環境変数の設定に応じて、通知先を制御可能
+- **実装ファイル**
+  - `src/notify_overdue_tasks.py`: 期限切れタスクの通知を行うPythonスクリプト
+- **環境変数設定**
+  - 通知設定（明示的に有効/無効を制御）:
+    - `ENABLE_DISCORD_NOTIFICATION`: Discordへの通知を有効にするか（true/false）
+    - `ENABLE_SLACK_NOTIFICATION`: Slackへの通知を有効にするか（true/false）
+  - Webhook URL設定（有効にした通知先に必要）:
+    - `DISCORD_WEBHOOK_URL`: DiscordのWebhook URL
+    - `SLACK_WEBHOOK_URL`: SlackのWebhook URL
+- **通知フォーマット**
+  ```
+  **期限切れ警告**: [タスクタイトル] (#番号) の期限（YYYY-MM-DD）が過ぎています
+  **ステータス**: [ステータス]
+  **担当者**: [GitHubアサイン] ([Issue本文内の担当者])
+  **URL**: [Issue URL]
+  ```
+- **通知方法**
+  - Discord/Slack Webhookを使用して通知
+  - 通知コマンド例:
+    ```bash
+    # Discordに通知
+    curl -H "Content-Type: application/json" \
+         -d '{
+           "content": "**期限切れ警告**: [タスクタイトル] (#番号) の期限（YYYY-MM-DD）が過ぎています\n**ステータス**: [ステータス]\n**担当者**: [GitHubアサイン] ([Issue本文内の担当者])\n**URL**: [Issue URL]"
+         }' \
+         $DISCORD_WEBHOOK_URL
+    
+    # Slackに通知
+    curl -H "Content-Type: application/json" \
+         -d '{
+           "text": "**期限切れ警告**: [タスクタイトル] (#番号) の期限（YYYY-MM-DD）が過ぎています\n**ステータス**: [ステータス]\n**担当者**: [GitHubアサイン] ([Issue本文内の担当者])\n**URL**: [Issue URL]"
+         }' \
+         $SLACK_WEBHOOK_URL
+    ```
+
+### **2.6 テスト設計**
 - **ユニットテスト**
-  - `.clinerules` の適用テスト  
-  - Cline の Issue 作成・QA・リスク抽出の動作確認  
+  - `.clinerules` の適用テスト
+  - Cline の Issue 作成・QA・リスク抽出の動作確認
 - **統合テスト**
-  - GitHub Issues / Projects との連携テスト  
-  - Slack / Discord 通知の動作確認  
+  - GitHub Issues / Projects との連携テスト
+  - Slack / Discord 通知の動作確認

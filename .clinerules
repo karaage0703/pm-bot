@@ -22,42 +22,6 @@
   - `gh project list`でプロジェクト一覧を取得
   - `gh project item-list $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER`でタスク一覧を取得
   - `gh project field-list $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER`でフィールド一覧を取得
-- プロジェクトのタスク一覧をテキスト化:
-  - GraphQL APIを使用して詳細情報（開始日・終了日など）を取得
-  - ```
-    gh api graphql -f query='
-    query {
-      user(login: "'$REPO_OWNER'") {
-        projectV2(number: '$GITHUB_PROJECT_NUMBER') {
-          items(first: 10) {
-            nodes {
-              content {
-                ... on Issue {
-                  title
-                  number
-                  repository {
-                    name
-                  }
-                }
-              }
-              fieldValues(first: 20) {
-                nodes {
-                  ... on ProjectV2ItemFieldDateValue {
-                    field {
-                      ... on ProjectV2FieldCommon {
-                        name
-                      }
-                    }
-                    date
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }'
-    ```
 
 ## Slack / Discord 通知
 - 通知フォーマット:
@@ -66,60 +30,34 @@
   - `期限切れ警告: {Issue タイトル} の期限（{期限}）が過ぎています`
 
 ## プロジェクトのタスク管理
-- タスク一覧のテキスト化:
-  - `docs/tasks.md`ファイルにタスク一覧を整理して保存
-  - GraphQL APIを使用してプロジェクトのタスク情報を取得
-  - タスク情報には以下を含める:
-    - 基本情報（Issue番号、リポジトリ、URL、状態、ラベル）
-    - 担当者情報（GitHubアサイン、Issue本文内の記載）
-    - 詳細内容（作業内容、期限など）
-    - プロジェクト情報（開始日、終了日、期限切れ状況）
-  - フォーマット例（`docs/tasks.md`を参照）:
-    ```markdown
-    # GitHub Project タスク一覧
-
-    ## 1. [カテゴリ] タスク名
-
-    ### 基本情報
-    - **Issue番号**: #番号
-    - **リポジトリ**: オーナー/リポジトリ
-    - **URL**: https://github.com/オーナー/リポジトリ/issues/番号
-    - **状態**: OPEN/CLOSED
-    - **ラベル**: ラベル名
-
-    ### 担当者情報
-    - **GitHubアサイン**: ユーザー名 (表示名)
-    - **Issue本文内の記載**: 担当者名
-
-    ### 詳細内容
-    - **詳細な作業内容**: 作業内容の説明
-    - **Issue本文内の期限**: YYYY-MM-DD
-
-    ### プロジェクト情報
-    - **開始日**: YYYY-MM-DD
-    - **終了日**: YYYY-MM-DD
-    - **期限切れ**: はい/いいえ（理由）
-    ```
+- タスク一覧の更新方法:
+  - `src/update_tasks.py`スクリプトを使用してタスク一覧を更新
+  - 実行コマンド: `python src/update_tasks.py`
+  - 必要な環境変数:
+    - `REPO_OWNER`: GitHubのユーザー名またはOrganization名
+    - `REPO_NAME`: リポジトリ名
+    - `GITHUB_PROJECT_NUMBER`: GitHubプロジェクト番号
+  - 実行結果: `docs/tasks.md`ファイルにタスク一覧が書き込まれる
+  - 詳細な仕様は`docs/design.md`を参照
 
 ## 期限切れタスクの通知
-- 期限切れタスクの検出と通知:
-  - `docs/tasks.md`ファイルからClineが期限切れタスクを検出
-  - 検出したタスクをDiscordに通知
-  - 通知内容:
-    ```
-    **期限切れ警告**: [タスクタイトル] (#番号) の期限（YYYY-MM-DD）が過ぎています
-    **ステータス**: [ステータス]
-    **担当者**: [GitHubアサイン] ([Issue本文内の担当者])
-    **URL**: [Issue URL]
-    ```
-  - 通知コマンド例:
+- 期限切れタスクの通知方法:
+  - `src/notify_overdue_tasks.py`スクリプトを使用して期限切れタスクを通知
+  - 実行コマンド: `python src/notify_overdue_tasks.py`
+  - 必要な環境変数:
+    - 通知設定（明示的に有効/無効を制御）:
+      - `ENABLE_DISCORD_NOTIFICATION`: Discordへの通知を有効にするか（true/false）
+      - `ENABLE_SLACK_NOTIFICATION`: Slackへの通知を有効にするか（true/false）
+    - Webhook URL設定（有効にした通知先に必要）:
+      - `DISCORD_WEBHOOK_URL`: DiscordのWebhook URL
+      - `SLACK_WEBHOOK_URL`: SlackのWebhook URL
+  - 実行結果: 期限切れタスクが設定に応じてDiscordやSlackに通知される
+  - 詳細な仕様は`docs/design.md`を参照
+- 定期実行の設定:
+  - cronなどを使用して定期的に実行することで、自動的に期限切れタスクを通知できる
+  - 例（毎日午前9時に実行）:
     ```bash
-    # Discordに通知
-    curl -H "Content-Type: application/json" \
-         -d '{
-           "content": "**期限切れ警告**: [タスクタイトル] (#番号) の期限（YYYY-MM-DD）が過ぎています\n**ステータス**: [ステータス]\n**担当者**: [GitHubアサイン] ([Issue本文内の担当者])\n**URL**: [Issue URL]"
-         }' \
-         $DISCORD_WEBHOOK_URL
+    0 9 * * * cd /path/to/pm-bot && python src/update_tasks.py && python src/notify_overdue_tasks.py
     ```
 
 
