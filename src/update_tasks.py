@@ -273,9 +273,9 @@ def check_if_overdue(task_info):
         try:
             end_date = datetime.date.fromisoformat(task_info["end_date"])
             if end_date < today:
-                return f"はい（終了日が過去の日付）"
+                return "はい（終了日が過去の日付）"
             else:
-                return f"いいえ（終了日は未来の日付）"
+                return "いいえ（終了日は未来の日付）"
         except ValueError:
             pass
 
@@ -284,9 +284,9 @@ def check_if_overdue(task_info):
         try:
             deadline = datetime.date.fromisoformat(task_info["deadline_in_body"])
             if deadline < today:
-                return f"はい（本文内の期限が過去の日付）"
+                return "はい（本文内の期限が過去の日付）"
             else:
-                return f"いいえ（本文内の期限は未来の日付）"
+                return "いいえ（本文内の期限は未来の日付）"
         except ValueError:
             pass
 
@@ -361,14 +361,14 @@ def format_task_to_markdown(task_info, index):
             detail = detail_match.group(1).strip()
             markdown += f"- **詳細な作業内容**: {detail}\n"
         else:
-            markdown += f"- **詳細**: 詳細情報なし\n"
+            markdown += "- **詳細**: 詳細情報なし\n"
     else:
         # 本文から意味のある最初の行を抽出
         lines = [line.strip() for line in task_info["body"].split("\n") if line.strip() and not line.strip().startswith("#")]
         if lines:
             markdown += f"- **詳細**: {lines[0]}\n"
         else:
-            markdown += f"- **詳細**: 詳細情報なし\n"
+            markdown += "- **詳細**: 詳細情報なし\n"
 
     if task_info["deadline_in_body"]:
         markdown += f"- **Issue本文内の期限**: {task_info['deadline_in_body']}\n"
