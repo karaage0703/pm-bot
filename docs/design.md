@@ -33,6 +33,11 @@ Cline の AI コーディング支援機能を活用し、タスク管理、資�
 - タスクの進捗やリスク情報を Slack / Discord に投稿  
 - `.clinerules` に Slack / Discord 通知のフォーマットを定義  
 
+#### **1.3.5 プロジェクト資料管理**
+- `materials`フォルダ内の様々な形式のファイル（PDF、PPTX、DOCX、MDなど）をMarkdownに変換
+- 変換した資料を`docs/project_info.md`ファイルに一元管理
+- プロジェクト関連資料の検索性と可読性の向上
+
 ### **1.4 非機能要件**
 - Cline の AI 処理を活用し、迅速なタスク管理・QA・リスク抽出を実現  
 - GitHub API を活用し、リアルタイムな Issue・PR の管理を可能にする  
@@ -53,6 +58,7 @@ Cline の AI コーディング支援機能を活用し、タスク管理、資�
 - `.clinerules` 設定ファイル  
 - GitHub Issues / Projects の運用ガイド  
 - `docs/risk.md`（リスク管理記録）  
+- `docs/project_info.md`（プロジェクト資料の一元管理）
 - Slack / Discord 通知のフォーマット定義  
 
 ---
@@ -75,6 +81,10 @@ Cline の AI コーディング支援機能を活用し、タスク管理、資�
    - PR による資料の管理  
 3. **Slack / Discord**
    - Webhook を用いたタスク進捗・リスク情報の通知  
+4. **プロジェクト資料管理**
+   - `materials`フォルダによる各種資料の保存
+   - `markitdown`ライブラリによる資料のMarkdown変換
+   - `docs/project_info.md`による資料の一元管理
 
 ### **2.2 詳細設計**
 
@@ -99,13 +109,15 @@ Cline の AI コーディング支援機能を活用し、タスク管理、資�
   - `gh project item-list $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER`でタスク一覧を取得
 
 ## プロジェクトのタスク管理
-- タスク一覧のテキスト化:
-  - `docs/tasks.md`ファイルにタスク一覧を整理して保存
-  - タスク情報には以下を含める:
-    - 基本情報（Issue番号、リポジトリ、URL、状態、ラベル）
-    - 担当者情報（GitHubアサイン、Issue本文内の記載）
-    - 詳細内容（作業内容、期限など）
-    - プロジェクト情報（開始日、終了日、期限切れ状況）
+- タスク一覧の更新方法:
+  - `src/update_tasks.py`スクリプトを使用してタスク一覧を更新
+  - 実行コマンド: `python src/update_tasks.py`
+  - 必要な環境変数:
+    - `REPO_OWNER`: GitHubのユーザー名またはOrganization名
+    - `REPO_NAME`: リポジトリ名
+    - `GITHUB_PROJECT_NUMBER`: GitHubプロジェクト番号
+  - 実行結果: `docs/tasks.md`ファイルにタスク一覧が書き込まれる
+  - 詳細な仕様は`docs/design.md`を参照
 
 ## 資料の QA
 - ユーザーが「@/docs/design.md について質問」と指示すると、Cline が回答
@@ -123,10 +135,24 @@ Cline の AI コーディング支援機能を活用し、タスク管理、資�
   - `期限切れ警告: {Issue タイトル} (#番号) の期限（YYYY-MM-DD）が過ぎています`
 
 ## 期限切れタスクの通知
-- 期限切れタスクの検出と通知:
-  - `docs/tasks.md`ファイルからClineが期限切れタスクを検出
-  - 検出したタスクをDiscordに通知
-  - 通知内容に担当者情報を含める
+- 期限切れタスクの通知方法:
+  - `src/notify_overdue_tasks.py`スクリプトを使用して期限切れタスクを通知
+  - 実行コマンド: `python src/notify_overdue_tasks.py`
+  - 必要な環境変数:
+    - 通知設定（明示的に有効/無効を制御）:
+      - `ENABLE_DISCORD_NOTIFICATION`: Discordへの通知を有効にするか（true/false）
+      - `ENABLE_SLACK_NOTIFICATION`: Slackへの通知を有効にするか（true/false）
+    - Webhook URL設定（有効にした通知先に必要）:
+      - `DISCORD_WEBHOOK_URL`: DiscordのWebhook URL
+      - `SLACK_WEBHOOK_URL`: SlackのWebhook URL
+  - 実行結果: 期限切れタスクが設定に応じてDiscordやSlackに通知される
+  - 詳細な仕様は`docs/design.md`を参照
+- 定期実行の設定:
+  - cronなどを使用して定期的に実行することで、自動的に期限切れタスクを通知できる
+  - 例（毎日午前9時に実行）:
+    ```bash
+    0 9 * * * cd /path/to/pm-bot && python src/update_tasks.py && python src/notify_overdue_tasks.py
+    ```
 ```
 
 #### **2.2.2 データフロー**
@@ -147,9 +173,15 @@ Cline の AI コーディング支援機能を活用し、タスク管理、資�
    - Cline に「この Issue の進捗を Slack / Discord に通知して」と指示  
    - Webhook を用いて Slack / Discord に投稿  
 
+5. **プロジェクト資料管理**
+   - `materials`フォルダに各種資料（PDF、PPTX、DOCX、MDなど）を保存
+   - `src/generate_project_info.py`スクリプトを実行して資料をMarkdownに変換
+   - 変換した資料を`docs/project_info.md`ファイルに一元管理
+
 ### **2.3 インターフェース設計**
 - **GitHub API** を使用して Issue / Projects を管理  
 - **Slack / Discord Webhook** を使用して通知を送信  
+- **markitdown** ライブラリを使用して各種資料をMarkdownに変換
 
 ### **2.4 セキュリティ設計**
 - GitHub のアクセス権限を適切に管理  
@@ -281,10 +313,52 @@ Cline の AI コーディング支援機能を活用し、タスク管理、資�
          $SLACK_WEBHOOK_URL
     ```
 
+#### **2.5.3 プロジェクト資料管理**
+- **概要**
+  - `materials`フォルダ内の様々な形式のファイル（PDF、PPTX、DOCX、MDなど）をMarkdownに変換
+  - 変換した資料を`docs/project_info.md`ファイルに一元管理
+  - プロジェクト関連資料の検索性と可読性の向上
+- **実装ファイル**
+  - `src/generate_project_info.py`: 資料変換を行うPythonスクリプト
+- **使用ライブラリ**
+  - `markitdown`: 様々な形式のファイルをMarkdownに変換するライブラリ
+- **コマンドライン引数**
+  - `--input-dir`: 入力ディレクトリのパス（デフォルト: materials）
+  - `--output-file`: 出力ファイルのパス（デフォルト: docs/project_info.md）
+  - `--recursive`: サブディレクトリも再帰的に処理する
+- **出力フォーマット**
+  ```markdown
+  # プロジェクト情報
+
+  このファイルは、materialsフォルダ内の資料を自動的にMarkdownに変換してまとめたものです。
+
+  **生成日時**: YYYY-MM-DD HH:MM:SS
+
+  ## 目次
+
+  1. [ファイル名1](#ファイル名1)
+  2. [ファイル名2](#ファイル名2)
+  ...
+
+  ## ファイル名1
+
+  [ファイル内容のMarkdown変換結果]
+
+  ---
+
+  ## ファイル名2
+
+  [ファイル内容のMarkdown変換結果]
+
+  ---
+  ```
+
 ### **2.6 テスト設計**
 - **ユニットテスト**
   - `.clinerules` の適用テスト
   - Cline の Issue 作成・QA・リスク抽出の動作確認
+  - 資料変換機能のテスト
 - **統合テスト**
   - GitHub Issues / Projects との連携テスト
   - Slack / Discord 通知の動作確認
+  - 資料変換と一元管理の動作確認

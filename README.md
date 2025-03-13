@@ -8,6 +8,7 @@
 - **資料の QA**: Cline による資料の質問応答
 - **リスク抽出**: 設計書からのリスク抽出と Issue 登録
 - **Slack/Discord 通知**: Webhook を用いたタスク進捗・リスク情報の通知
+- **プロジェクト資料管理**: materialsフォルダ内の資料をMarkdownに変換して一元管理
 
 ## インストール
 
@@ -33,14 +34,37 @@ cp .env.example .env
 - `GITHUB_PROJECT_NUMBER`: GitHub Projectの番号
 - `SLACK_WEBHOOK_URL`: Slack Webhook URL（オプション）
 - `DISCORD_WEBHOOK_URL`: Discord Webhook URL（オプション）
+- `ENABLE_SLACK_NOTIFICATION`: Slackへの通知を有効にするか（true/false）
+- `ENABLE_DISCORD_NOTIFICATION`: Discordへの通知を有効にするか（true/false）
 
 ## 使い方
 
-メインプログラムの実行:
+### タスク管理と通知
+
+タスク一覧の更新:
 
 ```bash
-python -m src.main
+python src/update_tasks.py
 ```
+
+期限切れタスクの通知:
+
+```bash
+python src/notify_overdue_tasks.py
+```
+
+### プロジェクト資料管理
+
+materialsフォルダ内の資料（PDF、PPTX、DOCX、MDなど）をMarkdownに変換して一元管理:
+
+```bash
+python src/generate_project_info.py
+```
+
+オプション:
+- `--input-dir`: 入力ディレクトリのパス（デフォルト: materials）
+- `--output-file`: 出力ファイルのパス（デフォルト: docs/project_info.md）
+- `--recursive`: サブディレクトリも再帰的に処理する
 
 ### コマンド例
 
@@ -111,4 +135,3 @@ docker compose down
 
 ```bash
 docker compose exec app pytest
-```
