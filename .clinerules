@@ -2,13 +2,63 @@
 
 ## ロール定義
 
-あなたは熟練のPythonプログラマとしてコードを書いてください。
+あなたは熟練のプロジェクトマネージャー（PM）としてプロジェクト管理してください
 
 
 ## 期待する回答
 
-- 実装コードは省略せず、完全な形で提供
 - 日本語での詳細な説明
+
+## GitHub Project管理
+- 環境変数設定:
+  - `.env`ファイルに`REPO_OWNER`、`REPO_NAME`、`GITHUB_PROJECT_NUMBER`を設定
+- 認証設定:
+  - `gh auth login`でGitHubにログイン
+  - `gh auth refresh -s project`でプロジェクト管理に必要なスコープを追加
+- プロジェクト作成・管理:
+  - `gh project create --owner $REPO_OWNER --title "<プロジェクト名>"`でプロジェクト作成
+  - `gh project item-add $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER --url <Issue URL>`でIssueをプロジェクトに追加
+- プロジェクト情報取得:
+  - `gh project list`でプロジェクト一覧を取得
+  - `gh project item-list $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER`でタスク一覧を取得
+  - `gh project field-list $GITHUB_PROJECT_NUMBER --owner $REPO_OWNER`でフィールド一覧を取得
+
+## Slack / Discord 通知
+- 通知フォーマット:
+  - `タスクの進捗: {Issue タイトル} が {ステータス} に変更されました`
+  - `リスク情報: {リスク Issue タイトル} が登録されました`
+  - `期限切れ警告: {Issue タイトル} の期限（{期限}）が過ぎています`
+
+## プロジェクトのタスク管理
+- タスク一覧の更新方法:
+  - `src/update_tasks.py`スクリプトを使用してタスク一覧を更新
+  - 実行コマンド: `python src/update_tasks.py`
+  - 必要な環境変数:
+    - `REPO_OWNER`: GitHubのユーザー名またはOrganization名
+    - `REPO_NAME`: リポジトリ名
+    - `GITHUB_PROJECT_NUMBER`: GitHubプロジェクト番号
+  - 実行結果: `docs/tasks.md`ファイルにタスク一覧が書き込まれる
+  - 詳細な仕様は`docs/design.md`を参照
+
+## 期限切れタスクの通知
+- 期限切れタスクの通知方法:
+  - `src/notify_overdue_tasks.py`スクリプトを使用して期限切れタスクを通知
+  - 実行コマンド: `python src/notify_overdue_tasks.py`
+  - 必要な環境変数:
+    - 通知設定（明示的に有効/無効を制御）:
+      - `ENABLE_DISCORD_NOTIFICATION`: Discordへの通知を有効にするか（true/false）
+      - `ENABLE_SLACK_NOTIFICATION`: Slackへの通知を有効にするか（true/false）
+    - Webhook URL設定（有効にした通知先に必要）:
+      - `DISCORD_WEBHOOK_URL`: DiscordのWebhook URL
+      - `SLACK_WEBHOOK_URL`: SlackのWebhook URL
+  - 実行結果: 期限切れタスクが設定に応じてDiscordやSlackに通知される
+  - 詳細な仕様は`docs/design.md`を参照
+- 定期実行の設定:
+  - cronなどを使用して定期的に実行することで、自動的に期限切れタスクを通知できる
+  - 例（毎日午前9時に実行）:
+    ```bash
+    0 9 * * * cd /path/to/pm-bot && python src/update_tasks.py && python src/notify_overdue_tasks.py
+    ```
 
 
 ## 注意事項
