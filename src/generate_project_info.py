@@ -36,19 +36,19 @@ def parse_arguments():
         help="出力ファイルのパス（デフォルト: docs/project_info.md）",
     )
     parser.add_argument(
-        "--recursive",
+        "--no-recursive",
         action="store_true",
-        help="サブディレクトリも再帰的に処理する",
+        help="サブディレクトリを再帰的に処理しない（デフォルトは再帰的に処理する）",
     )
     return parser.parse_args()
 
 
-def get_files(directory, recursive=False):
+def get_files(directory, recursive=True):
     """指定されたディレクトリ内のファイルを取得する関数
 
     Args:
         directory (str): ディレクトリのパス
-        recursive (bool, optional): サブディレクトリも再帰的に処理するかどうか. Defaults to False.
+        recursive (bool, optional): サブディレクトリも再帰的に処理するかどうか. Defaults to True.
 
     Returns:
         list: ファイルパスのリスト
@@ -94,13 +94,13 @@ def convert_to_markdown(file_path):
         return f"# {os.path.basename(file_path)}\n\n*このファイルの変換に失敗しました。*\n\n"
 
 
-def generate_project_info(input_dir, output_file, recursive=False):
+def generate_project_info(input_dir, output_file, recursive=True):
     """プロジェクト情報を生成する関数
 
     Args:
         input_dir (str): 入力ディレクトリのパス
         output_file (str): 出力ファイルのパス
-        recursive (bool, optional): サブディレクトリも再帰的に処理するかどうか. Defaults to False.
+        recursive (bool, optional): サブディレクトリも再帰的に処理するかどうか. Defaults to True.
 
     Returns:
         bool: 成功した場合はTrue、失敗した場合はFalse
@@ -165,7 +165,7 @@ def generate_project_info(input_dir, output_file, recursive=False):
 def main():
     """メイン関数"""
     args = parse_arguments()
-    success = generate_project_info(args.input_dir, args.output_file, args.recursive)
+    success = generate_project_info(args.input_dir, args.output_file, not args.no_recursive)
     return 0 if success else 1
 
 

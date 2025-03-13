@@ -64,7 +64,7 @@ python src/generate_project_info.py
 オプション:
 - `--input-dir`: 入力ディレクトリのパス（デフォルト: materials）
 - `--output-file`: 出力ファイルのパス（デフォルト: docs/project_info.md）
-- `--recursive`: サブディレクトリも再帰的に処理する
+- `--no-recursive`: サブディレクトリを再帰的に処理しない（デフォルトは再帰的に処理する）
 
 ### コマンド例
 
